@@ -1,0 +1,10 @@
+name = "router-utama"
+main = "src/index.js"
+compatibility_date = "2024-11-18"
+
+# Masukkan semua domain kamu di sini (Wildcard)
+# Ini menggantikan setting manual di Dashboard Triggers
+routes = [
+	{ pattern = "*.bokklastread.co.uk/*", zone_name = "bokklastread.co.uk" },
+	{ pattern = "*.domainkedua.com/*", zone_name = "domainkedua.com" }
+]
