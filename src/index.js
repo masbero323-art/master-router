@@ -15,7 +15,7 @@ export default {
     
     const allowedDomains = [
       "bokklastread.co.uk",
-      "brocenter.co.uk"
+      "brocenter.co.uk",
       "profitbotfx.uk"
     ];
 
