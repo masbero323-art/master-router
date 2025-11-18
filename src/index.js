@@ -16,7 +16,26 @@ export default {
     const allowedDomains = [
       "bokklastread.co.uk",
       "brocenter.co.uk",
-      "profitbotfx.uk"
+      "brocenter.uk",
+      "cengeng.co.uk",
+      "cipllondon.co.uk",
+      "cipluk.uk",
+      "dalbankeak.co.uk",
+      "gembul.co.uk",
+      "gentonk.co.uk",
+      "getpdfbook.co.uk",
+      "getpdfbook.uk",
+      "kopyor.co.uk",
+      "kopyor.uk",
+      "kuntrink.co.uk",
+      "kuntrink.uk",
+      "lemper.co.uk",
+      "lemper.org.uk",
+      "profitbotfx.co.uk",
+      "profitbotfx.uk",
+      "realcipluk.co.uk",
+      "smilespirit.co.uk",
+      "smilespirit.uk"
     ];
 
     // Cek Domain Induk
