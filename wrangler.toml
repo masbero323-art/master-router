@@ -7,5 +7,6 @@ compatibility_date = "2024-11-18"
 routes = [
 	{ pattern = "*.bokklastread.co.uk/*", zone_name = "bokklastread.co.uk" },
 	{ pattern = "*.brocenter.co.uk/*", zone_name = "brocenter.co.uk" }
-
+	{ pattern = "*.profitbotfx.uk/*", zone_name = "profitbotfx.uk" }
 ]
+
