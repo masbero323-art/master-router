@@ -16,6 +16,7 @@ export default {
     const allowedDomains = [
       "bokklastread.co.uk",
       "brocenter.co.uk"
+      "profitbotfx.uk"
     ];
 
     // Cek Domain Induk
