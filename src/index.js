@@ -1,10 +1,16 @@
+// =========================================================
+// GLOBAL CACHE (Disimpan di memori Worker)
+// =========================================================
+let cachedMappings = null;
+let lastFetchTime = 0;
+const CACHE_DURATION = 60 * 1000; // 60 detik (Data di GitHub dicek tiap 1 menit)
+
 export default {
   async fetch(request) {
     const url = new URL(request.url);
-    const hostname = url.hostname; // misal: admin.bokklastread.co.uk
+    const hostname = url.hostname; 
 
-    // 1. SETTING: Masukkan URL RAW dari file routes.json di GitHub kamu
-    // Cara dapat link raw: Buka file di GitHub -> Klik tombol 'Raw' di pojok kanan
+    // LINK RAW JSON GITHUB KAMU
     const CONFIG_URL = "https://raw.githubusercontent.com/masbero323-art/master-router/main/routes.json";
     
     const allowedDomains = [
@@ -17,38 +23,51 @@ export default {
     if (!rootDomain) return new Response("Error 403: Invalid Domain", { status: 403 });
     
     if (hostname === rootDomain || hostname === `www.${rootDomain}`) {
-       return new Response("Halaman Utama", { status: 200 });
+       return new Response("Halaman Utama Router", { status: 200 });
     }
 
-    // Ambil Subdomain
     const subdomain = hostname.replace(`.${rootDomain}`, "");
 
-    // 2. LOGIKA UTAMA: AMBIL DATA DARI GITHUB (Cached)
-    let targetProject = subdomain; // Default: subdomain = nama project
+    // =========================================================
+    // LOGIKA SUPER CEPAT (SMART CACHING)
+    // =========================================================
+    const now = Date.now();
 
-    try {
-      // Kita fetch file JSON mapping, tapi kita cache sebentar (misal 60 detik) 
-      // supaya tidak membebani GitHub dan loadingnya cepat.
-      const configResponse = await fetch(CONFIG_URL, {
-        cf: {
-          cacheTtl: 60,
-          cacheEverything: true
+    // Cek 1: Apakah kita sudah punya data di memori dan belum kadaluarsa?
+    if (cachedMappings && (now - lastFetchTime < CACHE_DURATION)) {
+      // JIKA YA: Pakai data lama saja (Instant!)
+      // console.log("Using In-Memory Cache"); 
+    } else {
+      // JIKA TIDAK: Terpaksa ambil dari GitHub
+      try {
+        const response = await fetch(CONFIG_URL, {
+            cf: {
+                cacheTtl: 60, // Cache di level jaringan Cloudflare juga
+                cacheEverything: true
+            }
+        });
+        
+        if (response.ok) {
+            cachedMappings = await response.json();
+            lastFetchTime = now;
         }
-      });
-
-      if (configResponse.ok) {
-        const mappings = await configResponse.json();
-        // Cek apakah subdomain ini ada di daftar mapping?
-        if (mappings[subdomain]) {
-          targetProject = mappings[subdomain]; // Yess! Ganti tujuannya.
+      } catch (e) {
+        // Kalau GitHub error, pakai data terakhir yang ada (Fail-safe)
+        if (!cachedMappings) {
+            cachedMappings = {}; // Kosongkan jika benar-benar tidak ada data
         }
       }
-    } catch (e) {
-      // Kalau gagal ambil JSON (misal GitHub down), dia akan tetap jalan pakai default (subdomain = project)
-      console.log("Gagal ambil config, pakai default.");
     }
 
-    // 3. EKSEKUSI ROUTING
+    // Tentukan Target
+    let targetProject = subdomain; // Default
+    
+    // Cek Mapping dari Cache
+    if (cachedMappings && cachedMappings[subdomain]) {
+      targetProject = cachedMappings[subdomain];
+    }
+
+    // Eksekusi ke Pages
     const targetHostname = `${targetProject}.pages.dev`;
     const targetUrl = new URL(request.url);
     targetUrl.hostname = targetHostname;
