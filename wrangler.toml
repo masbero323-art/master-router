@@ -6,5 +6,6 @@ compatibility_date = "2024-11-18"
 # Ini menggantikan setting manual di Dashboard Triggers
 routes = [
 	{ pattern = "*.bokklastread.co.uk/*", zone_name = "bokklastread.co.uk" },
-	{ pattern = "*.domainkedua.com/*", zone_name = "domainkedua.com" }
+	{ pattern = "*.brocenter.co.uk/*", zone_name = "brocenter.co.uk" }
+
 ]
