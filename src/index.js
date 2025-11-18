@@ -1,75 +1,62 @@
 export default {
   async fetch(request) {
     const url = new URL(request.url);
-    const hostname = url.hostname; // Contoh: "project1.bokklastread.co.uk"
+    const hostname = url.hostname; // misal: admin.bokklastread.co.uk
 
-    // =================================================================
-    // 1. KONFIGURASI: DAFTAR DOMAIN UTAMA
-    // =================================================================
-    // Masukkan semua domain yang kamu hubungkan ke Worker ini.
+    // 1. SETTING: Masukkan URL RAW dari file routes.json di GitHub kamu
+    // Cara dapat link raw: Buka file di GitHub -> Klik tombol 'Raw' di pojok kanan
+    const CONFIG_URL = "https://raw.githubusercontent.com/masbero323-art/master-router/main/routes.json";
+    
     const allowedDomains = [
       "bokklastread.co.uk",
-      "brocenter.co.uk",
-      // "domainketiga.net"
+      "brocenter.co.uk"
     ];
 
-    // =================================================================
-    // 2. DETEKSI DOMAIN & SUBDOMAIN
-    // =================================================================
-    
-    // Cari tahu request ini datang dari domain induk yang mana
+    // Cek Domain Induk
     const rootDomain = allowedDomains.find(d => hostname.endsWith(d));
-
-    // Jika domain tidak dikenali (atau akses via IP), tolak request.
-    if (!rootDomain) {
-      return new Response("Error 403: Domain configuration mismatch.", { status: 403 });
-    }
-
-    // Cek apakah ini akses ke Root Domain (tanpa subdomain)
-    // Contoh: hanya akses "bokklastread.co.uk" atau "www.bokklastread.co.uk"
+    if (!rootDomain) return new Response("Error 403: Invalid Domain", { status: 403 });
+    
     if (hostname === rootDomain || hostname === `www.${rootDomain}`) {
-       return new Response(`Halo! Ini adalah halaman utama untuk ${rootDomain}`, { status: 200 });
+       return new Response("Halaman Utama", { status: 200 });
     }
 
-    // Ekstrak nama subdomainnya saja
-    // Contoh logic: "project1.bokklastread.co.uk" dikurang ".bokklastread.co.uk" = "project1"
+    // Ambil Subdomain
     const subdomain = hostname.replace(`.${rootDomain}`, "");
 
-    // =================================================================
-    // 3. LOGIKA ROUTING (TEMPAT MENGATUR TUJUAN)
-    // =================================================================
-    
-    /**
-     * SKENARIO: DYNAMIC PAGES
-     * Nama subdomain akan dianggap sebagai nama project Cloudflare Pages.
-     * * Input:  toko-budi.bokklastread.co.uk
-     * Output: toko-budi.pages.dev
-     */
-    
-    const targetHostname = `${subdomain}.pages.dev`;
-    
-    // Buat URL tujuan baru
-    const targetUrl = new URL(request.url);
-    targetUrl.hostname = targetHostname;
-    
-    // =================================================================
-    // 4. EKSEKUSI (REVERSE PROXY)
-    // =================================================================
-
-    // Kita buat request baru ke target (pages.dev)
-    // Kita perlu memalsukan header 'Host' agar Cloudflare Pages di sana mau menerima request kita.
-    const newRequest = new Request(targetUrl, request);
-    newRequest.headers.set("Host", targetHostname);
-    newRequest.headers.set("X-Forwarded-Host", hostname); // Memberitahu backend domain asli user
+    // 2. LOGIKA UTAMA: AMBIL DATA DARI GITHUB (Cached)
+    let targetProject = subdomain; // Default: subdomain = nama project
 
     try {
-      // Fetch konten dari targetUrl
-      const response = await fetch(newRequest);
-      
-      // Kembalikan responsenya ke user (seolah-olah dari domain kamu sendiri)
-      return response;
-    } catch (err) {
-      return new Response(`Gagal menghubungi tujuan: ${targetHostname}`, { status: 502 });
+      // Kita fetch file JSON mapping, tapi kita cache sebentar (misal 60 detik) 
+      // supaya tidak membebani GitHub dan loadingnya cepat.
+      const configResponse = await fetch(CONFIG_URL, {
+        cf: {
+          cacheTtl: 60,
+          cacheEverything: true
+        }
+      });
+
+      if (configResponse.ok) {
+        const mappings = await configResponse.json();
+        // Cek apakah subdomain ini ada di daftar mapping?
+        if (mappings[subdomain]) {
+          targetProject = mappings[subdomain]; // Yess! Ganti tujuannya.
+        }
+      }
+    } catch (e) {
+      // Kalau gagal ambil JSON (misal GitHub down), dia akan tetap jalan pakai default (subdomain = project)
+      console.log("Gagal ambil config, pakai default.");
     }
+
+    // 3. EKSEKUSI ROUTING
+    const targetHostname = `${targetProject}.pages.dev`;
+    const targetUrl = new URL(request.url);
+    targetUrl.hostname = targetHostname;
+
+    const newRequest = new Request(targetUrl, request);
+    newRequest.headers.set("Host", targetHostname);
+    newRequest.headers.set("X-Forwarded-Host", hostname);
+
+    return fetch(newRequest);
   }
 };
