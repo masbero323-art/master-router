@@ -40,10 +40,11 @@ export default {
 
     // Cek Domain Induk
     const rootDomain = allowedDomains.find(d => hostname.endsWith(d));
-    if (!rootDomain) return new Response("Error 403: Invalid Domain", { status: 403 });
+    if (!rootDomain) return new Response("Error 403: Invalid Domain Configuration", { status: 403 });
     
+    // Jika akses domain utama (tanpa subdomain)
     if (hostname === rootDomain || hostname === `www.${rootDomain}`) {
-       return new Response("Halaman Utama Router", { status: 200 });
+       return new Response("Halaman Utama Router - Akses Subdomain Diperlukan", { status: 200 });
     }
 
     const subdomain = hostname.replace(`.${rootDomain}`, "");
@@ -56,7 +57,6 @@ export default {
     // Cek 1: Apakah kita sudah punya data di memori dan belum kadaluarsa?
     if (cachedMappings && (now - lastFetchTime < CACHE_DURATION)) {
       // JIKA YA: Pakai data lama saja (Instant!)
-      // console.log("Using In-Memory Cache"); 
     } else {
       // JIKA TIDAK: Terpaksa ambil dari GitHub
       try {
@@ -72,22 +72,33 @@ export default {
             lastFetchTime = now;
         }
       } catch (e) {
-        // Kalau GitHub error, pakai data terakhir yang ada (Fail-safe)
+        // Kalau GitHub error, dan cache kosong, inisialisasi objek kosong
         if (!cachedMappings) {
-            cachedMappings = {}; // Kosongkan jika benar-benar tidak ada data
+            cachedMappings = {}; 
         }
       }
     }
 
-    // Tentukan Target
-    let targetProject = subdomain; // Default
+    // =========================================================
+    // 🛡️ SECURITY FIX: STRICT MODE (MODE KETAT) 🛡️
+    // =========================================================
+    
+    let targetProject = null; // Defaultnya NULL (Bukan subdomain lagi)
     
     // Cek Mapping dari Cache
     if (cachedMappings && cachedMappings[subdomain]) {
       targetProject = cachedMappings[subdomain];
     }
 
-    // Eksekusi ke Pages
+    // ⛔ BLOKIR JIKA TIDAK TERDAFTAR ⛔
+    // Jika targetProject masih null (artinya tidak ketemu di JSON), tolak!
+    if (!targetProject) {
+        return new Response("❌ Error 404: Access Denied. Subdomain not registered.", { status: 404 });
+    }
+
+    // =========================================================
+    // EKSEKUSI ROUTING (Hanya jika lolos pengecekan di atas)
+    // =========================================================
     const targetHostname = `${targetProject}.pages.dev`;
     const targetUrl = new URL(request.url);
     targetUrl.hostname = targetHostname;
