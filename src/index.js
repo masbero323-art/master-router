@@ -1,21 +1,21 @@
 // =========================================================
-// GLOBAL CACHE
+// GLOBAL CACHE (Disimpan di memori Worker)
 // =========================================================
 let cachedMappings = null;
 let lastFetchTime = 0;
-const CACHE_DURATION = 60 * 1000; 
+const CACHE_DURATION = 60 * 1000; // 60 detik
 
 export default {
   async fetch(request) {
     const url = new URL(request.url);
     const hostname = url.hostname; 
 
-    // 1. KONFIGURASI URL
+    // 1. KONFIGURASI URL & PROJECT DEFAULT
     const CONFIG_URL = "https://raw.githubusercontent.com/masbero323-art/master-router/main/routes.json";
     
-    // 🔴 GANTI INI DENGAN URL HALAMAN 404 KAMU SENDIRI 🔴
-    // Bisa berupa file .html khusus, atau halaman home page
-    const URL_CUSTOM_404 = "https://brocenter.pages.dev/404"; 
+    // 🔴 GANTI INI DENGAN NAMA PROJECT PAGES UTAMA KAMU 🔴
+    // Contoh: jika project utamamu adalah 'landing-page.pages.dev', tulis 'landing-page'
+    const DEFAULT_FALLBACK_PROJECT = "books-c6s"; 
 
     const allowedDomains = [
       "bokklastread.co.uk",
@@ -46,14 +46,15 @@ export default {
     const rootDomain = allowedDomains.find(d => hostname.endsWith(d));
     if (!rootDomain) return new Response("Error 403: Invalid Domain Config", { status: 403 });
     
+    // Jika akses langsung ke domain utama (tanpa subdomain), arahkan ke fallback juga
     if (hostname === rootDomain || hostname === `www.${rootDomain}`) {
-       return new Response("Halaman Utama Router", { status: 200 });
+       // Kita biarkan lanjut ke bawah agar diarahkan ke DEFAULT_FALLBACK_PROJECT
     }
 
     const subdomain = hostname.replace(`.${rootDomain}`, "");
 
     // =========================================================
-    // LOGIKA CACHING
+    // LOGIKA CACHING (Ambil routes.json)
     // =========================================================
     const now = Date.now();
     if (cachedMappings && (now - lastFetchTime < CACHE_DURATION)) {
@@ -73,20 +74,23 @@ export default {
     }
 
     // =========================================================
-    // STRICT MODE CHECK
+    // 🔀 LOGIKA ROUTING (FALLBACK MODE) 🔀
     // =========================================================
+    
     let targetProject = null;
-    if (cachedMappings && cachedMappings[subdomain]) {
-      targetProject = cachedMappings[subdomain];
-    }
 
+    // 1. Cek apakah subdomain ada di daftar JSON?
+    if (cachedMappings && cachedMappings[subdomain]) {
+      targetProject = cachedMappings[subdomain]; // Ada! Pakai tujuan khusus.
+    } 
+    
+    // 2. Jika TIDAK ADA di JSON (atau akses root), pakai DEFAULT
     if (!targetProject) {
-        // Jika subdomain tidak terdaftar, TAMPILKAN CUSTOM 404 JUGA
-        return await fetchCustom404(URL_CUSTOM_404);
+        targetProject = DEFAULT_FALLBACK_PROJECT;
     }
 
     // =========================================================
-    // EKSEKUSI ROUTING DENGAN ERROR HANDLING
+    // EKSEKUSI KE PAGES
     // =========================================================
     const targetHostname = `${targetProject}.pages.dev`;
     const targetUrl = new URL(request.url);
@@ -97,40 +101,9 @@ export default {
     newRequest.headers.set("X-Forwarded-Host", hostname);
 
     try {
-        // Ambil respon dari target (Pages)
-        const response = await fetch(newRequest);
-
-        // 🔍 CEK STATUS: APAKAH HALAMAN TIDAK DITEMUKAN (404)?
-        if (response.status === 404) {
-            // Jika target bilang 404, kita jangan kasih respon aslinya.
-            // Kita ambil halaman Custom 404 kita sendiri.
-            return await fetchCustom404(URL_CUSTOM_404);
-        }
-
-        // Jika status 200 (OK) atau lainnya, kembalikan apa adanya
-        return response;
-
+        return await fetch(newRequest);
     } catch (err) {
-        // Jika server target mati/error 502
         return new Response("Error: Target server unavailable", { status: 502 });
     }
   }
 };
-
-// =========================================================
-// FUNGSI BANTUAN: AMBIL HALAMAN 404
-// =========================================================
-async function fetchCustom404(customUrl) {
-    try {
-        const errorPageResponse = await fetch(customUrl);
-        // Kita ambil isi badannya (HTML), tapi statusnya tetap kita kasih 404
-        // supaya Google tahu halaman ini memang tidak ada.
-        return new Response(errorPageResponse.body, {
-            status: 404,
-            headers: errorPageResponse.headers
-        });
-    } catch (e) {
-        // Fallback darurat kalau halaman 404-nya sendiri error
-        return new Response("404 Not Found (Custom Page Error)", { status: 404 });
-    }
-}
