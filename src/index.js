@@ -1,18 +1,22 @@
 // =========================================================
-// GLOBAL CACHE (Disimpan di memori Worker)
+// GLOBAL CACHE
 // =========================================================
 let cachedMappings = null;
 let lastFetchTime = 0;
-const CACHE_DURATION = 60 * 1000; // 60 detik (Data di GitHub dicek tiap 1 menit)
+const CACHE_DURATION = 60 * 1000; 
 
 export default {
   async fetch(request) {
     const url = new URL(request.url);
     const hostname = url.hostname; 
 
-    // LINK RAW JSON GITHUB KAMU
+    // 1. KONFIGURASI URL
     const CONFIG_URL = "https://raw.githubusercontent.com/masbero323-art/master-router/main/routes.json";
     
+    // 🔴 GANTI INI DENGAN URL HALAMAN 404 KAMU SENDIRI 🔴
+    // Bisa berupa file .html khusus, atau halaman home page
+    const URL_CUSTOM_404 = "https://brocenter.pages.dev/404"; 
+
     const allowedDomains = [
       "bokklastread.co.uk",
       "brocenter.co.uk",
@@ -40,64 +44,49 @@ export default {
 
     // Cek Domain Induk
     const rootDomain = allowedDomains.find(d => hostname.endsWith(d));
-    if (!rootDomain) return new Response("Error 403: Invalid Domain Configuration", { status: 403 });
+    if (!rootDomain) return new Response("Error 403: Invalid Domain Config", { status: 403 });
     
-    // Jika akses domain utama (tanpa subdomain)
     if (hostname === rootDomain || hostname === `www.${rootDomain}`) {
-       return new Response("Halaman Utama Router - Akses Subdomain Diperlukan", { status: 200 });
+       return new Response("Halaman Utama Router", { status: 200 });
     }
 
     const subdomain = hostname.replace(`.${rootDomain}`, "");
 
     // =========================================================
-    // LOGIKA SUPER CEPAT (SMART CACHING)
+    // LOGIKA CACHING
     // =========================================================
     const now = Date.now();
-
-    // Cek 1: Apakah kita sudah punya data di memori dan belum kadaluarsa?
     if (cachedMappings && (now - lastFetchTime < CACHE_DURATION)) {
-      // JIKA YA: Pakai data lama saja (Instant!)
+       // Pakai cache
     } else {
-      // JIKA TIDAK: Terpaksa ambil dari GitHub
       try {
         const response = await fetch(CONFIG_URL, {
-            cf: {
-                cacheTtl: 60, // Cache di level jaringan Cloudflare juga
-                cacheEverything: true
-            }
+            cf: { cacheTtl: 60, cacheEverything: true }
         });
-        
         if (response.ok) {
             cachedMappings = await response.json();
             lastFetchTime = now;
         }
       } catch (e) {
-        // Kalau GitHub error, dan cache kosong, inisialisasi objek kosong
-        if (!cachedMappings) {
-            cachedMappings = {}; 
-        }
+        if (!cachedMappings) cachedMappings = {}; 
       }
     }
 
     // =========================================================
-    // 🛡️ SECURITY FIX: STRICT MODE (MODE KETAT) 🛡️
+    // STRICT MODE CHECK
     // =========================================================
-    
-    let targetProject = null; // Defaultnya NULL (Bukan subdomain lagi)
-    
-    // Cek Mapping dari Cache
+    let targetProject = null;
     if (cachedMappings && cachedMappings[subdomain]) {
       targetProject = cachedMappings[subdomain];
     }
 
-    // ⛔ BLOKIR JIKA TIDAK TERDAFTAR ⛔
-    // Jika targetProject masih null (artinya tidak ketemu di JSON), tolak!
     if (!targetProject) {
-        return new Response("❌ Error 404: Access Denied. Subdomain not registered.", { status: 404 });
+        // Jika subdomain tidak terdaftar, TAMPILKAN CUSTOM 404 JUGA
+        return await fetchCustom404(URL_CUSTOM_404);
     }
 
     // =========================================================
-    // EKSEKUSI ROUTING (Hanya jika lolos pengecekan di atas)
+    // EKSEKUSI ROUTING DENGAN ERROR HANDLING
     // =========================================================
     const targetHostname = `${targetProject}.pages.dev`;
     const targetUrl = new URL(request.url);
@@ -107,6 +96,41 @@ export default {
     newRequest.headers.set("Host", targetHostname);
     newRequest.headers.set("X-Forwarded-Host", hostname);
 
-    return fetch(newRequest);
+    try {
+        // Ambil respon dari target (Pages)
+        const response = await fetch(newRequest);
+
+        // 🔍 CEK STATUS: APAKAH HALAMAN TIDAK DITEMUKAN (404)?
+        if (response.status === 404) {
+            // Jika target bilang 404, kita jangan kasih respon aslinya.
+            // Kita ambil halaman Custom 404 kita sendiri.
+            return await fetchCustom404(URL_CUSTOM_404);
+        }
+
+        // Jika status 200 (OK) atau lainnya, kembalikan apa adanya
+        return response;
+
+    } catch (err) {
+        // Jika server target mati/error 502
+        return new Response("Error: Target server unavailable", { status: 502 });
+    }
   }
 };
+
+// =========================================================
+// FUNGSI BANTUAN: AMBIL HALAMAN 404
+// =========================================================
+async function fetchCustom404(customUrl) {
+    try {
+        const errorPageResponse = await fetch(customUrl);
+        // Kita ambil isi badannya (HTML), tapi statusnya tetap kita kasih 404
+        // supaya Google tahu halaman ini memang tidak ada.
+        return new Response(errorPageResponse.body, {
+            status: 404,
+            headers: errorPageResponse.headers
+        });
+    } catch (e) {
+        // Fallback darurat kalau halaman 404-nya sendiri error
+        return new Response("404 Not Found (Custom Page Error)", { status: 404 });
+    }
+}
