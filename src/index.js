@@ -1,20 +1,17 @@
 // =========================================================
-// GLOBAL CACHE (Disimpan di memori Worker)
+// CONFIG: GLOBAL CACHE & TIMEOUT
 // =========================================================
-let cachedMappings = null;
-let lastFetchTime = 0;
-const CACHE_DURATION = 60 * 1000; // 60 detik
+const CACHE_TTL = 3600; // Cache selama 1 Jam (detik) agar cepat & hemat kuota
 
 export default {
-  async fetch(request) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
     const hostname = url.hostname; 
 
     // 1. KONFIGURASI URL & PROJECT DEFAULT
     const CONFIG_URL = "https://raw.githubusercontent.com/masbero323-art/master-router/main/routes.json";
     
-    // 🔴 GANTI INI DENGAN NAMA PROJECT PAGES UTAMA KAMU 🔴
-    // Contoh: jika project utamamu adalah 'landing-page.pages.dev', tulis 'landing-page'
+    // 🔴 PROJECT FALLBACK KAMU
     const DEFAULT_FALLBACK_PROJECT = "books-c6s"; 
 
     const allowedDomains = [
@@ -46,64 +43,77 @@ export default {
     const rootDomain = allowedDomains.find(d => hostname.endsWith(d));
     if (!rootDomain) return new Response("Error 403: Invalid Domain Config", { status: 403 });
     
-    // Jika akses langsung ke domain utama (tanpa subdomain), arahkan ke fallback juga
-    if (hostname === rootDomain || hostname === `www.${rootDomain}`) {
-       // Kita biarkan lanjut ke bawah agar diarahkan ke DEFAULT_FALLBACK_PROJECT
-    }
-
+    // Ambil Subdomain
     const subdomain = hostname.replace(`.${rootDomain}`, "");
 
     // =========================================================
-    // LOGIKA CACHING (Ambil routes.json)
+    // 2. SMART ROUTING (Cari Tujuan via JSON)
     // =========================================================
-    const now = Date.now();
-    if (cachedMappings && (now - lastFetchTime < CACHE_DURATION)) {
-       // Pakai cache
-    } else {
-      try {
-        const response = await fetch(CONFIG_URL, {
-            cf: { cacheTtl: 60, cacheEverything: true }
-        });
-        if (response.ok) {
-            cachedMappings = await response.json();
-            lastFetchTime = now;
-        }
-      } catch (e) {
-        if (!cachedMappings) cachedMappings = {}; 
-      }
-    }
-
-    // =========================================================
-    // 🔀 LOGIKA ROUTING (FALLBACK MODE) 🔀
-    // =========================================================
-    
     let targetProject = null;
-
-    // 1. Cek apakah subdomain ada di daftar JSON?
-    if (cachedMappings && cachedMappings[subdomain]) {
-      targetProject = cachedMappings[subdomain]; // Ada! Pakai tujuan khusus.
-    } 
     
-    // 2. Jika TIDAK ADA di JSON (atau akses root), pakai DEFAULT
-    if (!targetProject) {
+    // Kita fetch JSON Mapping (dengan Cache sebentar biar gak berat)
+    let mappings = {};
+    try {
+        const configReq = await fetch(CONFIG_URL, { cf: { cacheTtl: 300, cacheEverything: true } });
+        if (configReq.ok) mappings = await configReq.json();
+    } catch (e) {}
+
+    if (mappings[subdomain]) {
+        targetProject = mappings[subdomain];
+    } else {
         targetProject = DEFAULT_FALLBACK_PROJECT;
     }
 
     // =========================================================
-    // EKSEKUSI KE PAGES
+    // 3. SIAPKAN REQUEST KE PAGES (ORIGIN)
     // =========================================================
     const targetHostname = `${targetProject}.pages.dev`;
     const targetUrl = new URL(request.url);
     targetUrl.hostname = targetHostname;
+    targetUrl.protocol = "https:"; // Paksa HTTPS
 
-    const newRequest = new Request(targetUrl, request);
-    newRequest.headers.set("Host", targetHostname);
-    newRequest.headers.set("X-Forwarded-Host", hostname);
+    const proxyRequest = new Request(targetUrl, request);
+    
+    // 🛡️ HEADER MASKING (PENTING!)
+    // Ini memberitahu script Pages bahwa domain aslinya adalah subdomain kamu
+    proxyRequest.headers.set("Host", targetHostname);
+    proxyRequest.headers.set("X-Forwarded-Host", hostname);
+    proxyRequest.headers.set("X-Forwarded-Proto", "https");
 
+    // =========================================================
+    // 4. EKSEKUSI DENGAN CACHE & ANTI-LEAK
+    // =========================================================
     try {
-        return await fetch(newRequest);
+        // A. Fetch dengan Cache Cloudflare (Solusi Lemot)
+        // Ini membuat Worker mengambil data dari CDN terdekat, bukan query ulang terus.
+        let response = await fetch(proxyRequest, {
+            cf: {
+                cacheTtl: CACHE_TTL,
+                cacheEverything: true, 
+            }
+        });
+
+        // B. Buat Response Baru (Agar bisa diedit headernya)
+        const newResponse = new Response(response.body, response);
+
+        // C. ANTI-LEAK: Cek Redirect (Solusi URL Pages Bocor)
+        // Jika Pages menyuruh redirect ke 'xxx.pages.dev', kita ceggat dan ganti.
+        const locationHeader = newResponse.headers.get("Location");
+        if (locationHeader) {
+            if (locationHeader.includes(".pages.dev")) {
+                // Ganti alamat pages.dev dengan domain asli kita
+                const fixedLocation = locationHeader.replace(targetHostname, hostname);
+                newResponse.headers.set("Location", fixedLocation);
+            }
+        }
+
+        // D. Opsional: Tambahkan Security Header
+        newResponse.headers.set("X-Powered-By", "Master-Router");
+
+        return newResponse;
+
     } catch (err) {
-        return new Response("Error: Target server unavailable", { status: 502 });
+        return new Response(`Error: Upstream Timeout or Unavailable (${err.message})`, { status: 502 });
     }
   }
 };
