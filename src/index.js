@@ -36,8 +36,7 @@ export default {
       "profitbotfx.uk",
       "realcipluk.co.uk",
       "smilespirit.co.uk",
-      "smilespirit.uk",
-      "kampretoz.uk"
+      "smilespirit.uk"
     ];
 
     // Cek Domain Induk
