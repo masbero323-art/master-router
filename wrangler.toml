@@ -26,8 +26,7 @@ routes = [
 		{ pattern = "*.profitbotfx.uk/*", zone_name = "profitbotfx.uk" },
 		{ pattern = "*.realcipluk.co.uk/*", zone_name = "realcipluk.co.uk" },
 		{ pattern = "*.smilespirit.co.uk/*", zone_name = "smilespirit.co.uk" },
-		{ pattern = "*.smilespirit.uk/*", zone_name = "smilespirit.uk" },
-		{ pattern = "*.kampretoz.uk/*", zone_name = "kampretoz.uk" }
+		{ pattern = "*.smilespirit.uk/*", zone_name = "smilespirit.uk" }
 
 ]
 
