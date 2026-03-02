@@ -5,15 +5,10 @@ compatibility_date = "2024-11-18"
 # Masukkan semua domain kamu di sini (Wildcard)
 # Ini menggantikan setting manual di Dashboard Triggers
 routes = [
-		{ pattern = "*.bokklastread.co.uk/*", zone_name = "bokklastread.co.uk" },
 		{ pattern = "*.brocenter.co.uk/*", zone_name = "brocenter.co.uk" },
 		{ pattern = "*.brocenter.uk/*", zone_name = "brocenter.uk" },
-		{ pattern = "*.cengeng.co.uk/*", zone_name = "cengeng.co.uk" },
 		{ pattern = "*.dalbankeak.co.uk/*", zone_name = "dalbankeak.co.uk" },
-		{ pattern = "*.gembul.co.uk/*", zone_name = "gembul.co.uk" },
-		{ pattern = "*.gentonk.co.uk/*", zone_name = "gentonk.co.uk" },
 		{ pattern = "*.getpdfbook.co.uk/*", zone_name = "getpdfbook.co.uk" },
-		{ pattern = "*.getpdfbook.uk/*", zone_name = "getpdfbook.uk" },
 		{ pattern = "*.kopyor.co.uk/*", zone_name = "kopyor.co.uk" },
 		{ pattern = "*.kopyor.uk/*", zone_name = "kopyor.uk" },
 		{ pattern = "*.kuntrink.co.uk/*", zone_name = "kuntrink.co.uk" },
@@ -28,6 +23,7 @@ routes = [
 		{ pattern = "*.shopee-cod.my.id/*", zone_name = "shopee-cod.my.id" }
 
 ]
+
 
 
 
