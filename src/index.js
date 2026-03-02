@@ -63,15 +63,10 @@ export default {
     const DEFAULT_FALLBACK_PROJECT = "lp-eqk"; 
 
     const allowedDomains = [
-      "bokklastread.co.uk",
       "brocenter.co.uk",
       "brocenter.uk",
-      "cengeng.co.uk",
       "dalbankeak.co.uk",
-      "gembul.co.uk",
-      "gentonk.co.uk",
       "getpdfbook.co.uk",
-      "getpdfbook.uk",
       "kopyor.co.uk",
       "kopyor.uk",
       "kuntrink.co.uk",
