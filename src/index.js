@@ -74,7 +74,6 @@ export default {
       "lemper.co.uk",
       "lemper.org.uk",
       "smilespirit.co.uk",
-      "smilespirit.uk",
       "shopee-cod.my.id",
       "cenulmania.my.id",
       "cantikul.my.id",
