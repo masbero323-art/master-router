@@ -75,7 +75,6 @@ export default {
       "lemper.org.uk",
       "smilespirit.co.uk",
       "shopee-cod.my.id",
-      "cenulmania.my.id",
       "cantikul.my.id",
       "kiwil.my.id",
       "router-utama.masbero323.workers.dev"
