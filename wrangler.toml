@@ -22,7 +22,7 @@ routes = [
 		{ pattern = "*.cengeng.co.uk/*", zone_name = "cengeng.co.uk" },
 		{ pattern = "*.gembul.co.uk/*", zone_name = "gembul.co.uk" },
 		{ pattern = "*.gentonk.co.uk/*", zone_name = "gentonk.co.uk" },
-		{ pattern = "*.shopee-cod.my.id/*", zone_name = "getpdfbook.uk" }
+		{ pattern = "*.getpdfbook.uk/*", zone_name = "getpdfbook.uk" }
 
 		
 		
