@@ -18,7 +18,14 @@ routes = [
 		{ pattern = "*.smilespirit.co.uk/*", zone_name = "smilespirit.co.uk" },
 		{ pattern = "*.kiwil.my.id/*", zone_name = "kiwil.my.id" },
 		{ pattern = "*.cantikul.my.id/*", zone_name = "cantikul.my.id" },
-		{ pattern = "*.shopee-cod.my.id/*", zone_name = "shopee-cod.my.id" }
+		{ pattern = "*.bokklastread.co.uk/*", zone_name = "bokklastread.co.uk" },
+		{ pattern = "*.cengeng.co.uk/*", zone_name = "cengeng.co.uk" },
+		{ pattern = "*.gembul.co.uk/*", zone_name = "gembul.co.uk" },
+		{ pattern = "*.gentonk.co.uk/*", zone_name = "gentonk.co.uk" },
+		{ pattern = "*.shopee-cod.my.id/*", zone_name = "getpdfbook.uk" }
+
+		
+		
 
 ]
 
