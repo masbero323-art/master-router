@@ -77,6 +77,11 @@ export default {
       "shopee-cod.my.id",
       "cantikul.my.id",
       "kiwil.my.id",
+      "bokklastread.co.uk",
+      "cengeng.co.uk",
+      "gembul.co.uk",
+      "gentonk.co.uk",
+      "getpdfbook.uk",
       "router-utama.masbero323.workers.dev"
     ];
 
